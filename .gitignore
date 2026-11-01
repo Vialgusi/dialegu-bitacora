@@ -1,0 +1,15 @@
+venv/
+node_modules/
+__pycache__/
+*.pyc
+.env
+build/
+dist-electron/
+backend-dist/
+*.wav
+*.mp3
+*.log
+!frontend/public/demo/*.mp3
+.pytest_cache/
+.test-tmp/
+!frontend/build/

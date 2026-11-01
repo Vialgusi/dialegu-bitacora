@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "meta": {
+    "nombre": "Grupo focal huerta comunitaria (demostración)",
+    "tema": "Balance del primer año de la huerta",
+    "tipo": "grupo_focal",
+    "fecha": "2026-10-31T10:00:00",
+    "duracion": 56.13,
+    "idioma": "es",
+    "calidad": "alta",
+    "modelo": "large-v3-turbo",
+    "dispositivo": "cpu",
+    "modelo_voces": "pyannote segmentación 3.0 + 3D-Speaker ERes2Net",
+    "segundos_proceso": 48,
+    "version_app": "0.3.0",
+    "audio_original": "demo/huerta.mp3",
+    "guia": [
+      "¿Qué ha significado la huerta?",
+      "¿Qué dificultades han encontrado?",
+      "¿Qué haremos en el próximo encuentro?"
+    ],
+    "momentos": [
+      {
+        "id": "m1",
+        "inicio": 8.56,
+        "titulo": "¿Qué ha significado la huerta?",
+        "tipo": "pregunta"
+      },
+      {
+        "id": "m2",
+        "inicio": 21.82,
+        "titulo": "¿Qué dificultades han encontrado?",
+        "tipo": "pregunta"
+      },
+      {
+        "id": "m3",
+        "inicio": 40.13,
+        "titulo": "¿Qué haremos en el próximo encuentro?",
+        "tipo": "pregunta"
+      }
+    ]
+  },
+  "voces": [
+    {
+      "id": "v1",
+      "nombre": "Voz 1",
+      "segundos": 23.1
+    },
+    {
+      "id": "v2",
+      "nombre": "Voz 2",
+      "segundos": 22.1
+    }
+  ],
+  "turnos": [
+    {
+      "id": "t1",
+      "voz": "v1",
+      "inicio": 0.0,
+      "fin": 6.22,
+      "texto": "Buenos días a todas y todos. Damos inicio al grupo focal sobre la huerta comunitaria del barrio.",
+      "palabras": []
+    },
+    {
+      "id": "t2",
+      "voz": "v1",
+      "inicio": 8.56,
+      "fin": 13.02,
+      "texto": "La primera pregunta es, ¿qué ha significado la huerta para ustedes en este año?",
+      "palabras": []
+    },
+    {
+      "id": "t3",
+      "voz": "v2",
+      "inicio": 14.26,
+      "fin": 20.66,
+      "texto": "Para mí ha sido un espacio de encuentro. Antes no conocía a mis vecinos y ahora nos vemos cada sábado.",
+      "palabras": [],
+      "cita": true
+    },
+    {
+      "id": "t4",
+      "voz": "v1",
+      "inicio": 21.82,
+      "fin": 25.26,
+      "texto": "Gracias. ¿Y qué dificultades han encontrado?",
+      "palabras": []
+    },
+    {
+      "id": "t5",
+      "voz": "v2",
+      "inicio": 26.24,
+      "fin": 32.64,
+      "texto": "La principal dificultad es el agua. En temporada seca no alcanza y tenemos que turnarnos para regar.",
+      "palabras": []
+    },
+    {
+      "id": "t6",
+      "voz": "v2",
+      "inicio": 35.13,
+      "fin": 39.09,
+      "texto": "También nos falta que la junta de acción comunal nos apoye con herramientas.",
+      "palabras": []
+    },
+    {
+      "id": "t7",
+      "voz": "v1",
+      "inicio": 40.13,
+      "fin": 49.13,
+      "texto": "Entiendo. Entonces quedan dos temas, el agua y las herramientas. Propongo que en el próximo encuentro definamos un plan de riego.",
+      "palabras": []
+    },
+    {
+      "id": "t8",
+      "voz": "v2",
+      "inicio": 49.99,
+      "fin": 55.29,
+      "texto": "De acuerdo. Yo me comprometo a hablar con la junta antes del 15 de noviembre.",
+      "palabras": []
+    }
+  ]
+}

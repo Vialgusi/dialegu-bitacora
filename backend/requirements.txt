@@ -1,0 +1,7 @@
+faster-whisper==1.2.1
+sherpa-onnx==2.0.1
+fastapi==0.162.0
+uvicorn==0.54.0
+fpdf2==2.9.0
+pydantic==2.14.2
+python-docx==1.2.0
