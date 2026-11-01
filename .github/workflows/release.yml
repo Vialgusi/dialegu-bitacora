@@ -70,7 +70,7 @@ jobs:
 
       - name: Compilar el instalador
         working-directory: frontend
-        run: npm run electron:build
+        run: npm run electron:build -- --publish never
 
       - name: Calcular el SHA-256 del instalador
         run: |
