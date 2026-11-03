@@ -26,7 +26,7 @@ ESPERAS = (2, 5, 10, 20, 30)
 # reconecta (reanudando con Range): umbral = máx(VELOCIDAD_MINIMA, mejor velocidad vista / 4).
 VENTANA = 15
 VELOCIDAD_MINIMA = 64_000
-AGENTE = "Dialegu-Bitacora/0.3 (+https://dialegu.com)"
+AGENTE = "Dialegu-Bitacora/0.4 (+https://dialegu.com)"
 
 
 class ErrorDescarga(Exception):

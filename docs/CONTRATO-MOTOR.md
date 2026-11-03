@@ -102,7 +102,7 @@ Es también lo que se guarda en el proyecto `.bitacora`.
     "modelo": "large-v3-turbo",
     "modelo_voces": "pyannote segmentación 3.0 + WeSpeaker ResNet34 VoxCeleb",
     "segundos_proceso": 1056,
-    "version_app": "0.3.0",
+    "version_app": "0.4.0",
     "audio_original": "C:\\...\\entrevista.mp4"
   },
   "voces": [
