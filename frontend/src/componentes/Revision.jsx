@@ -358,7 +358,7 @@ export default function Revision({ proyecto, alInicio }) {
           <h1>{documento.meta.nombre}</h1>
           <p>
             {tipos[documento.meta.tipo] || documento.meta.tipo} · {formatoTiempo(documento.meta.duracion)} ·{' '}
-            {documento.voces.length} voces
+            {documento.voces.length} {documento.voces.length === 1 ? 'voz' : 'voces'}
           </p>
           {documento.meta.modelo && (
             <p className="ficha-tecnica" title="Se incluye como nota metodológica en el informe">
