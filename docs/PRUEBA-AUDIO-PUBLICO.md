@@ -18,7 +18,7 @@ Equipo: i7-8700, 32 GB, GTX 1660 Ti. Modelo «Preciso» (`large-v3-turbo`), espa
 | Entrevista 8 min, automático | **1** (invitada e invitado en el mismo turno) | **2**, turnos alternados correctamente |
 | Entrevista 8 min, «2 personas» | 2, correcto | 2, correcto |
 | Debate 18 min, automático | **1** | 2 (el moderador queda con uno de los candidatos) |
-| Debate 18 min, «3 personas» | 2 (la tercera quedó por debajo de 10 s y se absorbió) | sin cambio |
+| Debate 18 min, «3 personas» | 2 (el tercer grupo tenía solo 21 s de habla) | sin cambio |
 
 Tiempos de proceso (incluye voces): entrevista de 8 min, 117 s con la tarjeta gráfica y 159 s solo con el procesador y el modelo «Ligero»; debate de 18 min, 249 a 279 s con la tarjeta. La primera transcripción tras abrir la app suma unos 50 s de carga del modelo en la tarjeta.
 
