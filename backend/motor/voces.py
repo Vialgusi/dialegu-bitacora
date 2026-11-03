@@ -22,10 +22,12 @@ def _leer_wav(ruta):
     return np.frombuffer(datos, dtype="<i2").astype(np.float32) / 32768.0
 
 
-# Umbral de agrupación automática y similitud mínima para fusionar fragmentos de una persona.
-# Valores provisionales para ResNet34: calibrar con la referencia de SPEC-V04 §3.5.
-UMBRAL_AGRUPACION = 0.5
-SIMILITUD_MISMA_PERSONA = 0.55
+# Medición: en una entrevista de 2 voces, 0,3–0,5 dan 2 grupos grandes y 0,6 da 1;
+# en un debate de 3 voces, 0,4 da 4 grupos y 0,5 da 2. Preferimos voces de más:
+# unirlas en la revisión es fácil; separarlas turno por turno no lo es.
+UMBRAL_AGRUPACION = 0.4
+SEGUNDOS_FRAGMENTO = 20.0
+FRACCION_FRAGMENTO = 0.05
 TRAMOS_POR_HUELLA = 8
 SEGUNDOS_MINIMOS_TRAMO = 1.5
 SEGUNDOS_MAXIMOS_TRAMO = 10.0
@@ -52,28 +54,24 @@ def _huella_media(audio, tramos, extractor):
     return media / (np.linalg.norm(media) or 1.0)
 
 
-def fusionar_por_similitud(huellas, segundos, umbral=SIMILITUD_MISMA_PERSONA):
-    """Agrupamiento aglomerativo de voces por huella.
+def absorber_fragmentos(huellas, segundos):
+    """Asigna solo voces breves a la voz grande con huella más parecida."""
+    if len(segundos) <= 1:
+        return {}
+    limite = max(SEGUNDOS_FRAGMENTO, FRACCION_FRAGMENTO * sum(segundos.values()))
+    grandes = [v for v, s in segundos.items() if s >= limite and huellas.get(v) is not None]
+    if not grandes:
+        return {}
 
-    huellas: {voz: vector normalizado}; segundos: {voz: duración} (pondera los promedios).
-    Devuelve {voz: voz_destino} solo para las voces que se fusionan.
-    """
-    grupos = {v: (h, segundos.get(v, 0.0), [v]) for v, h in huellas.items()}
-    while len(grupos) > 1:
-        claves = list(grupos)
-        mejor, par = umbral, None
-        for i, a in enumerate(claves):
-            for b in claves[i + 1 :]:
-                similitud = float(grupos[a][0] @ grupos[b][0])
-                if similitud > mejor:
-                    mejor, par = similitud, (a, b)
-        if par is None:
-            break
-        a, b = sorted(par, key=lambda v: grupos[v][1], reverse=True)  # la voz con más habla conserva su id
-        (ha, sa, ma), (hb, sb, mb) = grupos[a], grupos.pop(b)
-        media = ha * sa + hb * sb if sa + sb else ha + hb
-        grupos[a] = (media / (np.linalg.norm(media) or 1.0), sa + sb, ma + mb)
-    return {miembro: destino for destino, (_, _, miembros) in grupos.items() for miembro in miembros if miembro != destino}
+    def similitud(a, b):
+        ha, hb = huellas[a], huellas[b]
+        return float(ha @ hb) / ((np.linalg.norm(ha) * np.linalg.norm(hb)) or 1.0)
+
+    return {
+        v: max(grandes, key=lambda destino: similitud(v, destino))
+        for v, s in segundos.items()
+        if s < limite and huellas.get(v) is not None
+    }
 
 
 def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None):
@@ -123,7 +121,7 @@ def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, 
         h = _huella_media(audio, lista, extractor)
         if h is not None:
             huellas[v] = h
-    destino = fusionar_por_similitud(huellas, segundos)
+    destino = absorber_fragmentos(huellas, segundos)
     al_avanzar(1.0)
     return [(a, b, destino.get(v, v)) for a, b, v in tramos]
 

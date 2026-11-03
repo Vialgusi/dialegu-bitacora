@@ -8,6 +8,7 @@ import {
   formatoMemoria,
   formatoTamano,
   nombreDispositivo,
+  normalizarPersonas,
   recomendar,
 } from '../estado/equipo.js'
 import { abrirProyecto, consultarEquipo, elegirAudio, estimar } from '../plataforma.js'
@@ -70,7 +71,7 @@ export default function Inicio({ alCargar, alAbrir, alError }) {
   const preparar = () => ({
     ...datos,
     nombre: datos.nombre.trim(),
-    personas: datos.personas === '' ? null : Number(datos.personas),
+    personas: normalizarPersonas(datos.personas, datos.distinguir_voces),
     usar_gpu: conGpu,
     guia: datos.tipo === 'encuentro' ? [] : datos.guia.split('\n').map((p) => p.trim()).filter(Boolean),
   })

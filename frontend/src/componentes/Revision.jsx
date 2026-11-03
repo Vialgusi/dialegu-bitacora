@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   alternarCita,
+  avisoVoces,
   citarFragmento,
   contarCoincidencias,
   editarMomento,
@@ -16,6 +17,7 @@ import {
   formatoTiempo,
   renombrarVoz,
   unirConAnterior,
+  unirVoces,
 } from '../estado/transcripcion.js'
 import { formatoDuracion, nombreDispositivo } from '../estado/equipo.js'
 import { esDemo, exportar, guardarProyecto } from '../plataforma.js'
@@ -366,6 +368,7 @@ export default function Revision({ proyecto, alInicio }) {
               {documento.meta.distinguir_voces === false ? ' · sin distinguir voces' : ''}
             </p>
           )}
+          {avisoVoces(documento) && <p className="ficha-tecnica">{avisoVoces(documento)}</p>}
         </div>
         <button
           disabled={ocupado}
@@ -528,6 +531,22 @@ export default function Revision({ proyecto, alInicio }) {
                 {(voz.segundos / 60).toLocaleString('es', { maximumFractionDigits: 1 })} min ·{' '}
                 {total ? Math.round((voz.segundos / total) * 100) : 0}% del habla
               </small>
+              {documento.voces.length >= 2 && (
+                <select
+                  aria-label={`Unir ${voz.nombre} con otra voz`}
+                  value=""
+                  onChange={(evento) => {
+                    const destino = documento.voces.find((v) => v.id === evento.target.value)
+                    if (destino && window.confirm(`¿Unir todos los turnos de «${voz.nombre}» con «${destino.nombre}»? Puede deshacerlo cambiando la voz turno por turno`))
+                      editar((actual) => unirVoces(actual, voz.id, destino.id))
+                  }}
+                >
+                  <option value="">Unir con…</option>
+                  {documento.voces.filter((v) => v.id !== voz.id).map((v) => (
+                    <option key={v.id} value={v.id}>{v.nombre}</option>
+                  ))}
+                </select>
+              )}
             </div>
           ))}
           <section className="citas" aria-labelledby="titulo-citas">

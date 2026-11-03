@@ -57,6 +57,40 @@ def test_por_omision_distingue_voces(monkeypatch, tmp_path):
     assert resultado["meta"]["distinguir_voces"] is True
 
 
+@pytest.mark.parametrize("con_descarga", [False, True])
+def test_informa_carga_en_memoria_antes_de_cargar_whisper(monkeypatch, tmp_path, con_descarga):
+    cola, _ = preparar(monkeypatch, tmp_path)
+    monkeypatch.setattr(trabajos.modelos, "bytes_pendientes", lambda *_: 100 if con_descarga else 0)
+    asegurar = trabajos.modelos.asegurar_modelos
+
+    def asegurar_con_avance(carpeta, calidad, distinguir, al_descargar, cancelado):
+        if con_descarga:
+            al_descargar(100, 100)
+        return asegurar(carpeta, calidad, distinguir, al_descargar, cancelado)
+
+    monkeypatch.setattr(trabajos.modelos, "asegurar_modelos", asegurar_con_avance)
+    carpeta = tmp_path / "t"
+    carpeta.mkdir()
+    trabajo = Trabajo("t", {"ruta_audio": "x.wav", "calidad": "rapida", "nombre": "Prueba", "tipo": "encuentro", "idioma": "es"}, carpeta)
+    avances = []
+    avanzar = cola._avanzar
+
+    def registrar(*args):
+        avanzar(*args)
+        avances.append(trabajo.progreso)
+
+    def cargar(*_):
+        assert trabajo.etapa == "descargando_modelos"
+        assert trabajo.mensaje == "Cargando el modelo de transcripción en la memoria"
+        assert trabajo.progreso >= (10 if con_descarga else 9)
+        return WhisperFalso()
+
+    monkeypatch.setattr(cola, "_avanzar", registrar)
+    monkeypatch.setattr(trabajos.modelos, "cargar_whisper", cargar)
+    cola._procesar(trabajo)
+    assert avances == sorted(avances)
+
+
 @pytest.mark.parametrize("personas", [None, 1, 12])
 def test_parametros_de_calidad_y_personas_llegan_a_los_motores(monkeypatch, tmp_path, personas):
     cola, _ = preparar(monkeypatch, tmp_path)

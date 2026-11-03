@@ -221,6 +221,7 @@ class Cola:
 
         rutas = modelos.asegurar_modelos(self.carpeta_modelos, calidad_modelo, distinguir, al_descargar, cancelado)
         segmentacion, huellas = rutas["segmentacion"], rutas["huellas"]
+        self._avanzar(trabajo, "descargando_modelos", 9.5, "Cargando el modelo de transcripción en la memoria")
         try:
             whisper = modelos.cargar_whisper(rutas["whisper"], uso["dispositivo"])
             if uso["dispositivo"] == "cuda":

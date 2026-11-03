@@ -56,7 +56,8 @@ Los errores responden con el código HTTP correspondiente y `{ "detail": "<texto
 - `idioma`: código ISO (`es`, `en`, `pt`…) o `auto`.
 - `calidad`: `rapida` = «Ligero» (Whisper `small`) | `alta` = «Preciso» (`large-v3-turbo`) | `maximo` = «Máximo» (`large-v3`, 3,1 GB). Se respeta la elección también con GPU.
 - `tema`: además de ir al informe, se pasa a Whisper como `hotwords` (nombres, lugares y términos que orientan la transcripción).
-- `personas` (opcional, `null` por omisión): entero entre 1 y 12. Fija el número de voces y omite la fusión por similitud; con `null` la detección es automática. Solo se usa si `distinguir_voces` está activo. Se conserva en `meta.personas`.
+- `personas` (opcional, `null` por omisión): entero entre 1 y 12. Fija el número de voces y omite la extracción adicional de huellas y la absorción de fragmentos; con `null` la detección es automática. Solo se usa si `distinguir_voces` está activo. Se conserva en `meta.personas`.
+- En automático, la agrupación usa un umbral de 0,4. Solo se absorben fragmentos con menos de `max(20 s, 5 % del total de habla)`: cada uno se asigna a la voz no fragmento con mayor similitud de coseno, sin umbral de similitud. Las voces grandes nunca se fusionan entre sí; si todas son fragmentos o solo hay una voz, no se absorbe nada. Las voces sin huella no se tocan. `meta.modelo_voces` sigue indicando WeSpeaker ResNet34 VoxCeleb.
 - `usar_gpu` (por defecto `true`): si hay NVIDIA, transcribe en la tarjeta. La primera vez descarga cuBLAS (~570 MB, paquete oficial de NVIDIA en PyPI verificado con SHA-256) a `<datos>/modelos/cuda` y compila los núcleos CUDA (unos minutos). Ante cualquier fallo de la GPU el trabajo sigue o se repite en la CPU.
 - `distinguir_voces` (opcional, `true` por omisión): con `false` el motor no descarga ni usa los modelos de voces y entrega todo en una sola voz. Se copia en `meta.distinguir_voces`.
 - Solo se procesa un trabajo a la vez; los demás esperan en cola.

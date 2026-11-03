@@ -2,12 +2,14 @@ import prueba from 'node:test'
 import afirmar from 'node:assert/strict'
 import {
   asignarVoz,
+  avisoVoces,
   dividirTurno,
   editarTexto,
   formatoTiempo,
   recalcularVoces,
   renombrarVoz,
   unirConAnterior,
+  unirVoces,
 } from './transcripcion.js'
 
 function ejemplo() {
@@ -25,6 +27,43 @@ function ejemplo() {
     ],
   }
 }
+prueba('unir voces reasigna todos los turnos, conserva los datos y actualiza la entrevistadora sin mutar', () => {
+  const documento = ejemplo()
+  documento.meta.entrevistadora = 'v1'
+  const original = structuredClone(documento)
+  const resultado = unirVoces(documento, 'v1', 'v2')
+  afirmar.deepEqual(resultado.voces, [{ id: 'v2', nombre: 'Voz 2', segundos: 21 }])
+  afirmar.deepEqual(resultado.turnos, documento.turnos.map((t) => ({ ...t, voz: 'v2' })))
+  afirmar.equal(resultado.meta.entrevistadora, 'v2')
+  afirmar.deepEqual(documento, original)
+  documento.meta.entrevistadora = 'v2'
+  afirmar.equal(unirVoces(documento, 'v1', 'v2').meta.entrevistadora, 'v2')
+})
+prueba('unir la misma voz o identificadores inexistentes devuelve el documento original', () => {
+  const documento = ejemplo()
+  for (const [origen, destino] of [['v1', 'v1'], ['v3', 'v1'], ['v1', 'v3']])
+    afirmar.equal(unirVoces(documento, origen, destino), documento)
+})
+prueba('el aviso de una voz solo aparece desde tres minutos y al distinguir voces', () => {
+  const documento = ejemplo()
+  documento.meta.duracion = 180
+  afirmar.equal(avisoVoces(documento), null)
+  documento.voces = [documento.voces[0]]
+  afirmar.equal(avisoVoces(documento), 'Solo se detectó una voz en 3 minutos. Si en el audio hablan varias personas, vuelva a transcribir indicando cuántas son en «¿Cuántas personas hablan?».')
+  documento.meta.distinguir_voces = true
+  afirmar.ok(avisoVoces(documento))
+  documento.meta.distinguir_voces = false
+  afirmar.equal(avisoVoces(documento), null)
+  documento.meta.distinguir_voces = true
+  documento.meta.duracion = 179
+  afirmar.equal(avisoVoces(documento), null)
+  delete documento.meta.duracion
+  afirmar.equal(avisoVoces(documento), null)
+  documento.meta.duracion = 600
+  afirmar.match(avisoVoces(documento), /10 minutos/)
+  documento.voces = []
+  afirmar.equal(avisoVoces(documento), null)
+})
 prueba('renombrar una voz conserva su identificador y actualiza su duración', () => {
   const resultado = renombrarVoz(ejemplo(), 'v1', 'Karen')
   afirmar.deepEqual(resultado.voces[0], { id: 'v1', nombre: 'Karen', segundos: 13 })

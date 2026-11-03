@@ -100,7 +100,7 @@ Revise el texto completo, escuchando el audio, cuando:
 | Voz equivocada | Un turno atribuido a otra persona | Cambiar la voz desde el selector del turno |
 | Dos personas en un mismo turno | Pregunta y respuesta juntas | Poner el cursor donde cambia y **dividir** (Ctrl+Enter) |
 | Un turno partido en dos | La misma persona, cortada | **Unir con el anterior** |
-| Voces de más | «Voz 3» que en realidad es la Voz 1 | Reasignar sus turnos o nombrarla igual |
+| Voces de más | «Voz 3» que en realidad es la Voz 1 | Usar «Unir con…» en el panel de voces |
 
 ### Un flujo de revisión recomendado
 
@@ -172,7 +172,7 @@ Requisitos orientativos: Windows 10 u 11 de 64 bits, 8 GB de memoria (16 GB reco
 ## Limitaciones conocidas
 
 - Cuando dos personas hablan a la vez, el turno queda asignado a una sola.
-- Voces muy parecidas, o una persona que cambia mucho su distancia al micrófono, pueden quedar mezcladas o divididas en varias voces.
+- En grabaciones con mala calidad o voces parecidas, el reconocimiento automático puede juntar o partir personas; indicar cuántas personas hablan mejora el resultado, y en la revisión se pueden unir voces.
 - Tras silencios largos o con mucho ruido, Whisper puede inventar o repetir frases. Revise esos tramos.
 - Los nombres propios y los términos poco comunes fallan más, aunque ayuda escribirlos en «Tema y palabras clave».
 - La aceleración por tarjeta gráfica solo funciona con NVIDIA.
@@ -233,7 +233,7 @@ Imprime WER, DER aproximado y el número de voces. Conserva las tildes al compar
 El DER incluye omisiones, falsas alarmas y voces confundidas, sin margen de tolerancia en los cortes.
 Si está disponible `scipy`, el mapeo de voces es óptimo; de lo contrario usa una búsqueda voraz,
 indicada en la salida, que puede sobreestimar el error. La herramienta no se incluye en el instalador.
-Los umbrales iniciales de voces (agrupación 0,5 y fusión 0,55) quedan pendientes de calibrar con audio real corregido.
+La agrupación automática de voces usa un umbral de 0,4 y solo absorbe fragmentos menores de 20 s o del 5 % del habla; las voces grandes se conservan para la revisión.
 
 Para generar el instalador:
 
