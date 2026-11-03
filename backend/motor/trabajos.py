@@ -22,6 +22,13 @@ from .voces import Cancelado, reconocer_voces
 FRECUENCIA = 16000
 DIAS_CONSERVACION = 7
 
+
+def validar_personas(personas):
+    """También valida entradas directas a la cola, sin pasar por HTTP."""
+    if personas is not None and (type(personas) is not int or not 1 <= personas <= 12):
+        raise ValueError("personas debe ser un entero entre 1 y 12 o null")
+    return personas
+
 ETAPAS_MENSAJE = {
     "preparando": "Preparando el audio",
     "descargando_modelos": "Descargando modelos (solo la primera vez)",
@@ -38,6 +45,7 @@ def _minutos(segundos):
 
 class Trabajo:
     def __init__(self, id_, peticion, carpeta):
+        validar_personas(peticion.get("personas"))
         self.id = id_
         self.peticion = peticion
         self.carpeta = carpeta
@@ -99,6 +107,7 @@ class Cola:
     # --- API pública -------------------------------------------------------------
 
     def crear(self, peticion):
+        validar_personas(peticion.get("personas"))
         id_ = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
         carpeta = self.carpeta_trabajos / id_
         carpeta.mkdir(parents=True)
@@ -178,6 +187,7 @@ class Cola:
 
     def _procesar(self, trabajo):
         p = trabajo.peticion
+        personas = validar_personas(p.get("personas"))
         cancelado = trabajo.cancelar.is_set
         trabajo.inicio = time.monotonic()
         distinguir = p.get("distinguir_voces", True)
@@ -243,6 +253,10 @@ class Cola:
                 beam_size=5,
                 word_timestamps=True,
                 vad_filter=True,
+                # Evita arrastrar repeticiones o texto inventado a las ventanas siguientes.
+                condition_on_previous_text=False,
+                # Conserva pausas breves y margen alrededor del habla para no cortar palabras.
+                vad_parameters={"min_silence_duration_ms": 700, "speech_pad_ms": 400},
                 # El tema y las palabras clave orientan a Whisper en cada ventana: nombres, lugares y jerga.
                 hotwords=p.get("tema", "").strip() or None,
             )
@@ -268,7 +282,7 @@ class Cola:
 
         with ThreadPoolExecutor(max_workers=2) as hilos:
             futuro_voces = distinguir and hilos.submit(
-                reconocer_voces, trabajo.ruta_audio, segmentacion, huellas, lambda f: informar("voces", f), cancelado
+                reconocer_voces, trabajo.ruta_audio, segmentacion, huellas, lambda f: informar("voces", f), cancelado, personas
             )
             futuro_texto = hilos.submit(transcribir)
             try:
@@ -292,9 +306,10 @@ class Cola:
             "idioma": p["idioma"],
             "calidad": p["calidad"],
             "distinguir_voces": distinguir,
+            "personas": personas,
             "dispositivo": "gpu" if uso["dispositivo"] == "cuda" else "cpu",
             "modelo": modelos.WHISPER[p["calidad"]]["nombre"],
-            "modelo_voces": "pyannote segmentación 3.0 + 3D-Speaker ERes2Net" if distinguir else None,
+            "modelo_voces": "pyannote segmentación 3.0 + WeSpeaker ResNet34 VoxCeleb" if distinguir else None,
             "segundos_proceso": round(time.monotonic() - trabajo.inicio),
             "version_app": VERSION,
             "audio_original": p["ruta_audio"],

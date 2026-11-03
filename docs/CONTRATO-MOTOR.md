@@ -56,6 +56,7 @@ Los errores responden con el código HTTP correspondiente y `{ "detail": "<texto
 - `idioma`: código ISO (`es`, `en`, `pt`…) o `auto`.
 - `calidad`: `rapida` = «Ligero» (Whisper `small`) | `alta` = «Preciso» (`large-v3-turbo`) | `maximo` = «Máximo» (`large-v3`, 3,1 GB). Se respeta la elección también con GPU.
 - `tema`: además de ir al informe, se pasa a Whisper como `hotwords` (nombres, lugares y términos que orientan la transcripción).
+- `personas` (opcional, `null` por omisión): entero entre 1 y 12. Fija el número de voces y omite la fusión por similitud; con `null` la detección es automática. Solo se usa si `distinguir_voces` está activo. Se conserva en `meta.personas`.
 - `usar_gpu` (por defecto `true`): si hay NVIDIA, transcribe en la tarjeta. La primera vez descarga cuBLAS (~570 MB, paquete oficial de NVIDIA en PyPI verificado con SHA-256) a `<datos>/modelos/cuda` y compila los núcleos CUDA (unos minutos). Ante cualquier fallo de la GPU el trabajo sigue o se repite en la CPU.
 - `distinguir_voces` (opcional, `true` por omisión): con `false` el motor no descarga ni usa los modelos de voces y entrega todo en una sola voz. Se copia en `meta.distinguir_voces`.
 - Solo se procesa un trabajo a la vez; los demás esperan en cola.
@@ -99,7 +100,7 @@ Es también lo que se guarda en el proyecto `.bitacora`.
     "calidad": "rapida",
     "dispositivo": "cpu",
     "modelo": "large-v3-turbo",
-    "modelo_voces": "pyannote segmentación 3.0 + 3D-Speaker ERes2Net",
+    "modelo_voces": "pyannote segmentación 3.0 + WeSpeaker ResNet34 VoxCeleb",
     "segundos_proceso": 1056,
     "version_app": "0.3.0",
     "audio_original": "C:\\...\\entrevista.mp4"

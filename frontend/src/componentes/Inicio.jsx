@@ -20,6 +20,7 @@ export default function Inicio({ alCargar, alAbrir, alError }) {
   const [datos, cambiarDatos] = useState({
     nombre: '',
     tema: '',
+    personas: '',
     guia: '',
     tipo: 'encuentro',
     idioma: 'es',
@@ -69,6 +70,7 @@ export default function Inicio({ alCargar, alAbrir, alError }) {
   const preparar = () => ({
     ...datos,
     nombre: datos.nombre.trim(),
+    personas: datos.personas === '' ? null : Number(datos.personas),
     usar_gpu: conGpu,
     guia: datos.tipo === 'encuentro' ? [] : datos.guia.split('\n').map((p) => p.trim()).filter(Boolean),
   })
@@ -158,6 +160,19 @@ export default function Inicio({ alCargar, alAbrir, alError }) {
         <small id="ayuda-tema">
           Nombres, lugares y términos que se dirán: ayudan a que el modelo los escriba bien.
         </small>
+        <label htmlFor="personas">
+          ¿Cuántas personas hablan? <span>opcional</span>
+        </label>
+        <input
+          id="personas"
+          type="number"
+          min="1"
+          max="12"
+          step="1"
+          placeholder="No sé"
+          disabled={!datos.distinguir_voces}
+          {...campo('personas')}
+        />
         <div className="dos-columnas">
           <div>
             <label htmlFor="tipo">Tipo</label>

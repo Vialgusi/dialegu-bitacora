@@ -102,3 +102,23 @@ def test_rechaza_momentos_con_tiempos_invalidos(inicio):
     from backend.servidor import Momento
     with pytest.raises(ValidationError):
         Momento(id="m1", inicio=inicio, titulo="Pregunta")
+
+
+@pytest.mark.parametrize("personas", [0, 13, -1, True, 2.0, 1.5, "2", ""])
+def test_api_rechaza_personas_invalidas(cliente, personas):
+    respuesta = cliente.post("/api/trabajos", headers=con_token(), json={"ruta_audio": "x.wav", "nombre": "x", "personas": personas})
+    assert respuesta.status_code == 422
+
+
+@pytest.mark.parametrize("personas", [None, 1, 12])
+def test_api_pasa_personas_a_la_cola(cliente, tmp_path, monkeypatch, personas):
+    from types import SimpleNamespace
+    from backend.motor.trabajos import Cola
+
+    recibidas = []
+    monkeypatch.setattr(Cola, "crear", lambda self, peticion: recibidas.append(peticion) or SimpleNamespace(id="t"))
+    ruta = tmp_path / "x.wav"
+    ruta.touch()
+    respuesta = cliente.post("/api/trabajos", headers=con_token(), json={"ruta_audio": str(ruta), "nombre": "x", "personas": personas})
+    assert respuesta.status_code == 201
+    assert recibidas[0]["personas"] == personas
