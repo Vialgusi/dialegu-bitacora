@@ -129,3 +129,57 @@ def test_entrevista_no_repite_la_pregunta_del_titulo(demo):
     conversacion = md.split('## Conversación')[1].split('## Nota metodológica')[0]
     pregunta = demo['turnos'][2]['texto']  # Voz 2 habla menos: es la entrevistadora
     assert conversacion.count(pregunta) == 1
+
+
+def test_fecha_legible_valida_y_acepta_dia_primero():
+    from backend.motor.exportar import fecha_legible
+    assert fecha_legible('2026-10-31T10:00:00') == '31 de octubre de 2026'
+    assert fecha_legible('31-10-2026') == '31 de octubre de 2026'
+    assert fecha_legible('31/10/2026') == '31 de octubre de 2026'
+    assert fecha_legible('2026-00-15') == '2026-00-15'
+    assert fecha_legible('2026-13-01') == '2026-13-01'
+    assert fecha_legible('') == ''
+
+
+def test_pdf_sin_cursiva_conserva_la_fuente_y_sin_arial_no_pierde_signos(demo, monkeypatch, tmp_path):
+    from backend.motor import exportar
+    for nombre in ('arial.ttf', 'arialbd.ttf'):
+        (tmp_path / 'Fonts').mkdir(exist_ok=True)
+        (tmp_path / 'Fonts' / nombre).write_bytes((Path(exportar.os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts' / nombre).read_bytes())
+    monkeypatch.setenv('WINDIR', str(tmp_path))
+    fuente = exportar._fuente_unicode()
+    assert fuente and fuente['I'] == fuente['']
+    assert FORMATOS['informe-pdf'][0](demo).startswith(b'%PDF-')
+    monkeypatch.setattr(exportar, '_fuente_unicode', lambda: None)
+    pdf = exportar._Pdf('x')
+    assert pdf.t('— Voz 1 … «sí»') == '- Voz 1 ... «sí»'
+
+
+def test_markdown_no_convierte_lo_dicho_en_estructura(demo):
+    demo['turnos'][1]['texto'] = '- primero esto\n# y esto\n1. y aquello'
+    demo['turnos'][2]['texto'] = '> no es una cita anidada'
+    md = FORMATOS['informe-md'][0](demo).decode('utf-8')
+    assert r'\- primero esto' in md and r'\# y esto' in md and r'1\. y aquello' in md
+    assert r'> \> no es una cita anidada' in md
+
+
+def test_docx_respeta_el_orden_del_esquema(demo):
+    from docx import Document
+    doc = Document(BytesIO(FORMATOS['informe-docx'][0](demo)))
+    tblpr = [hijo.tag.split('}')[1] for hijo in doc.tables[0]._tbl.tblPr]
+    assert tblpr.index('tblBorders') < tblpr.index('tblLook')
+    assert doc.styles['Quote'].paragraph_format.keep_with_next
+    ppr = [hijo.tag.split('}')[1] for hijo in doc.styles['Quote'].element.pPr]
+    assert ppr.index('pBdr') < ppr.index('spacing') and ppr.index('pBdr') < ppr.index('ind')
+
+
+def test_pdf_con_titulos_y_nombres_muy_largos(demo):
+    demo['meta']['nombre'] = 'Sesión ' * 60
+    demo['voces'][0]['nombre'] = 'Nombre larguísimo ' * 20
+    demo['turnos'][2]['texto'] = 'palabra ' * 900
+    pdf = FORMATOS['informe-pdf'][0](demo)
+    assert pdf.startswith(b'%PDF-')
+    from backend.motor.exportar import _Pdf
+    hoja = _Pdf('x')
+    hoja.letra('', 8)
+    assert hoja.get_string_width(hoja.recortar('Sesión ' * 60, hoja.epw)) <= hoja.epw
