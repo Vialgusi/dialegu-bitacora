@@ -158,6 +158,7 @@ export default function Revision({ proyecto, alInicio }) {
   const citas = listarCitas(documento)
   const cambios = historial.version !== versionGuardada
   const total = documento.voces.reduce((suma, voz) => suma + voz.segundos, 0)
+  const avisoDeVoces = avisoVoces(documento)
   const turnoActivo =
     !reproduciendo || tiempo === null
       ? null
@@ -368,7 +369,7 @@ export default function Revision({ proyecto, alInicio }) {
               {documento.meta.distinguir_voces === false ? ' · sin distinguir voces' : ''}
             </p>
           )}
-          {avisoVoces(documento) && <p className="ficha-tecnica">{avisoVoces(documento)}</p>}
+          {avisoDeVoces && <p className="ficha-tecnica">{avisoDeVoces}</p>}
         </div>
         <button
           disabled={ocupado}

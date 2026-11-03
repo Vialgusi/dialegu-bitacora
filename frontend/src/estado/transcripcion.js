@@ -35,6 +35,8 @@ export function unirVoces(documento, origen, destino) {
       : documento.meta,
     voces: documento.voces.filter((voz) => voz.id !== origen),
     turnos: documento.turnos.map((turno) => turno.voz === origen ? { ...turno, voz: destino } : turno),
+    // La voz de respaldo de cada cita también debe apuntar a una voz que exista.
+    ...(documento.citas && { citas: documento.citas.map((cita) => cita.voz === origen ? { ...cita, voz: destino } : cita) }),
   })
 }
 export function avisoVoces(documento) {

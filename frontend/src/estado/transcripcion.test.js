@@ -39,6 +39,16 @@ prueba('unir voces reasigna todos los turnos, conserva los datos y actualiza la 
   documento.meta.entrevistadora = 'v2'
   afirmar.equal(unirVoces(documento, 'v1', 'v2').meta.entrevistadora, 'v2')
 })
+prueba('unir voces también reasigna la voz de respaldo de las citas', () => {
+  const documento = ejemplo()
+  documento.citas = [
+    { id: 'c1', turno: 'tx', voz: 'v1', inicio: 1, fin: 2, texto: 'a' },
+    { id: 'c2', turno: 't2', voz: 'v2', inicio: 12, fin: 13, texto: 'b' },
+  ]
+  const resultado = unirVoces(documento, 'v1', 'v2')
+  afirmar.deepEqual(resultado.citas.map((c) => c.voz), ['v2', 'v2'])
+  afirmar.equal(documento.citas[0].voz, 'v1')
+})
 prueba('unir la misma voz o identificadores inexistentes devuelve el documento original', () => {
   const documento = ejemplo()
   for (const [origen, destino] of [['v1', 'v1'], ['v3', 'v1'], ['v1', 'v3']])
