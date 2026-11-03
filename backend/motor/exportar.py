@@ -1,6 +1,7 @@
 """Exportación de una Transcripcion a Markdown, texto, subtítulos SRT, PDF y Word."""
 
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 
@@ -26,12 +27,23 @@ def hora(segundos, decimales=False):
 
 
 def fecha_legible(fecha):
-    """«2026-10-31T10:00:00» → «31 de octubre de 2026»; si no se entiende, se deja como vino."""
+    """«2026-10-31T10:00:00» o «31-10-2026» → «31 de octubre de 2026»; si no se entiende, se deja como vino."""
+    texto = str(fecha or "")
     try:
-        anio, mes, dia = (int(x) for x in str(fecha)[:10].split("-"))
+        partes = texto[:10].replace("/", "-").split("-")
+        if len(partes) != 3:
+            raise ValueError
+        if len(partes[0]) == 4:
+            anio, mes, dia = (int(x) for x in partes)
+        elif len(partes[2]) == 4:
+            dia, mes, anio = (int(x) for x in partes)
+        else:
+            raise ValueError
+        if not (1 <= mes <= 12 and 1 <= dia <= 31):
+            raise ValueError
         return f"{dia} de {MESES[mes - 1]} de {anio}"
-    except (ValueError, IndexError):
-        return str(fecha or "")
+    except ValueError:
+        return texto
 
 
 def porcentaje(valor):
@@ -106,8 +118,16 @@ def a_srt(t):
 def _fuente_unicode():
     """Arial de Windows si existe: cubre tildes, ñ, comillas y rayas que la fuente base del PDF no admite."""
     carpeta = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
-    rutas = {estilo: carpeta / nombre for estilo, nombre in {"": "arial.ttf", "B": "arialbd.ttf", "I": "ariali.ttf"}.items()}
-    return rutas if all(r.exists() for r in rutas.values()) else None
+    rutas = {"": carpeta / "arial.ttf", "B": carpeta / "arialbd.ttf", "I": carpeta / "ariali.ttf"}
+    if not (rutas[""].exists() and rutas["B"].exists()):
+        return None
+    if not rutas["I"].exists():
+        rutas["I"] = rutas[""]  # sin la cursiva, las citas van en redonda; no se pierde la fuente completa
+    return rutas
+
+
+# Signos fuera de latin-1 que usa el informe, para la fuente base del PDF (sin Arial).
+_LATIN1 = str.maketrans({"—": "-", "–": "-", "…": "...", "“": '"', "”": '"', "‘": "'", "’": "'"})
 
 
 class _Pdf(FPDF):
@@ -130,7 +150,19 @@ class _Pdf(FPDF):
         self.add_page()
 
     def t(self, texto):
-        return texto if self.unicode else str(texto).encode("latin-1", "replace").decode("latin-1")
+        if self.unicode:
+            return texto
+        return str(texto).translate(_LATIN1).encode("latin-1", "replace").decode("latin-1")
+
+    def recortar(self, texto, ancho):
+        """Corta con «…» lo que no cabe en `ancho` mm con la letra actual (para celdas de una línea)."""
+        texto = self.t(texto)
+        if self.get_string_width(texto) <= ancho:
+            return texto
+        puntos = self.t("…")
+        while texto and self.get_string_width(texto + puntos) > ancho:
+            texto = texto[:-1]
+        return texto.rstrip() + puntos
 
     def letra(self, estilo="", tamano=10, color=TINTA):
         self.set_font(self.familia, estilo, tamano)
@@ -140,7 +172,7 @@ class _Pdf(FPDF):
         if self.page_no() == 1:
             return
         self.letra("", 8, SUAVE)
-        self.cell(0, 5, self.t(self.titulo), new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 5, self.recortar(self.titulo, self.epw), new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*LINEA)
         self.set_line_width(0.2)
         self.line(self.l_margin, self.get_y() + 1, self.w - self.r_margin, self.get_y() + 1)
@@ -228,20 +260,24 @@ class _Pdf(FPDF):
 
     def _cita(self, valor):
         texto, atribucion = valor
-        self.espacio(14)
         self.letra("I", 10.5)
+        opciones = dict(align="L", padding=(0.5, 0, 0.5, 4))
+        alto = self.multi_cell(0, 5.6, self.t(f"«{texto}»"), dry_run=True, output="HEIGHT", **opciones)
+        # La cita y su atribución van juntas si caben en una página; si no, al menos arrancan con dos líneas.
+        self.espacio(alto + 5 if alto + 5 < self.eph else 16)
         self.set_draw_color(*VERDE)
         self.set_line_width(0.8)
-        self.multi_cell(0, 5.6, self.t(f"«{texto}»"), align="L", border="L", padding=(0.5, 0, 0.5, 4), new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 5.6, self.t(f"«{texto}»"), border="L", new_x="LMARGIN", new_y="NEXT", **opciones)
         self.letra("", 8.5, SUAVE)
-        self.cell(0, 5, self.t(f"— {atribucion}"), align="R", new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 5, self.recortar(f"— {atribucion}", self.epw), align="R", new_x="LMARGIN", new_y="NEXT")
         self.ln(2.5)
 
     def _turno(self, valor):
         nombre, inicio, texto = valor
         self.espacio(12)
         self.letra("B", 9.5, VERDE)
-        self.cell(self.get_string_width(self.t(nombre)) + 2, 5, self.t(nombre))
+        nombre = self.recortar(nombre, self.epw - 20)  # deja sitio a la hora
+        self.cell(self.get_string_width(nombre) + 2, 5, nombre)
         self.letra("", 8.5, SUAVE)
         self.cell(0, 5, inicio, new_x="LMARGIN", new_y="NEXT")
         self.letra("", 10)
@@ -339,6 +375,18 @@ def nota_metodologica(meta):
     return " ".join(frases)
 
 
+_MARCA_MD = re.compile(r"^(\s*)([-+*#>|]|\d+[.)](?=\s|$))")
+
+
+def _md_texto(texto):
+    """Lo que se dijo no debe volverse lista, título, cita ni tabla: se escapa la marca al inicio de cada línea."""
+    def escapar(m):
+        marca = m.group(2)
+        # «1.» se escapa como «1\.»: una barra delante del número quedaría visible.
+        return m.group(1) + (marca[:-1] + "\\" + marca[-1] if marca[0].isdigit() else "\\" + marca)
+    return "\n".join(_MARCA_MD.sub(escapar, linea) for linea in str(texto).split("\n"))
+
+
 def a_informe_markdown(t):
     def escapar(texto):
         return texto.replace("\\", "\\\\").replace("|", "\\|").replace("\n", "<br>")
@@ -357,9 +405,9 @@ def a_informe_markdown(t):
         elif tipo == "momento":
             lineas.append(f"- `{valor[0]}` {valor[1]}")
         elif tipo == "cita":
-            lineas += [f"> {valor[0]}", ">", f"> — {valor[1]}", ""]
+            lineas += [f"> {_md_texto(valor[0])}", ">", f"> — {valor[1]}", ""]
         elif tipo == "turno":
-            lineas += [f"**{valor[0]}** · `{valor[1]}`  ", valor[2], ""]
+            lineas += [f"**{valor[0]}** · `{valor[1]}`  ", _md_texto(valor[2]), ""]
         else:
             prefijo = {"titulo": "# ", "h1": "## ", "anexo": "## ", "h2": "### "}.get(tipo, "")
             lineas += [prefijo + valor, ""]
@@ -374,6 +422,17 @@ def _xml(etiqueta, **atributos):
     for nombre, valor in atributos.items():
         elemento.set(qn(nombre.replace("_", ":", 1)), valor)
     return elemento
+
+
+# Word valida el orden de los hijos según el esquema OOXML: cada elemento nuevo va antes de estos.
+_DESPUES_DE_LANG = ("w:eastAsianLayout", "w:specVanish", "w:oMath")
+_DESPUES_DE_PBDR = (
+    "w:shd", "w:tabs", "w:suppressAutoHyphens", "w:kinsoku", "w:wordWrap", "w:overflowPunct", "w:topLinePunct",
+    "w:autoSpaceDE", "w:autoSpaceDN", "w:bidi", "w:adjustRightInd", "w:snapToGrid", "w:spacing", "w:ind",
+    "w:contextualSpacing", "w:mirrorIndents", "w:suppressOverlap", "w:jc", "w:textDirection", "w:textAlignment",
+    "w:textboxTightWrap", "w:outlineLvl", "w:divId", "w:cnfStyle", "w:rPr", "w:sectPr", "w:pPrChange",
+)
+_DESPUES_DE_TBLBORDERS = ("w:shd", "w:tblLayout", "w:tblCellMar", "w:tblLook", "w:tblCaption", "w:tblDescription", "w:tblPrChange")
 
 
 def _docx_estilos(documento):
@@ -402,7 +461,7 @@ def _docx_estilos(documento):
     fuente(normal, 10.5)
     normal.paragraph_format.space_after = Pt(6)
     normal.paragraph_format.line_spacing = 1.15
-    normal.element.get_or_add_rPr().append(_xml("w:lang", w_val="es-CO"))
+    normal.element.get_or_add_rPr().insert_element_before(_xml("w:lang", w_val="es-CO"), *_DESPUES_DE_LANG)
 
     for nombre, tamano, color, antes, despues in (("Title", 22, VERDE, 0, 4), ("Heading 1", 15, VERDE, 18, 6), ("Heading 2", 11.5, TINTA, 12, 4)):
         estilo = estilos[nombre]
@@ -420,9 +479,12 @@ def _docx_estilos(documento):
     cita.paragraph_format.left_indent = Cm(0.6)
     cita.paragraph_format.right_indent = Cm(0)
     cita.paragraph_format.space_after = Pt(2)
+    # La atribución no queda sola al comienzo de la página siguiente.
+    cita.paragraph_format.keep_with_next = True
+    cita.paragraph_format.keep_together = True
     borde = _xml("w:pBdr")
     borde.append(_xml("w:left", w_val="single", w_sz="18", w_space="10", w_color="215846"))
-    cita.element.get_or_add_pPr().append(borde)
+    cita.element.get_or_add_pPr().insert_element_before(borde, *_DESPUES_DE_PBDR)
 
     for nombre, tamano, color in (("Atribución", 8.5, SUAVE), ("Ficha", 10, TINTA), ("Nota", 9.5, SUAVE), ("Pie", 8, SUAVE)):
         estilo = estilos.add_style(nombre, WD_STYLE_TYPE.PARAGRAPH)
@@ -452,7 +514,7 @@ def _docx_tabla(documento, filas):
     bordes = _xml("w:tblBorders")
     for lado in ("top", "bottom", "insideH"):
         bordes.append(_xml(f"w:{lado}", w_val="single", w_sz="4", w_color="D8DED4"))
-    tabla._tbl.tblPr.append(bordes)
+    tabla._tbl.tblPr.insert_element_before(bordes, *_DESPUES_DE_TBLBORDERS)
     anchos = [Cm(6.5)] + [Cm(3.2)] * (len(filas[0]) - 1)
     for i, fila in enumerate(filas):
         fila_docx = tabla.add_row()
