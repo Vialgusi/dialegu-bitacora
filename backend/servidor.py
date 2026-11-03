@@ -39,6 +39,7 @@ class NuevoTrabajo(BaseModel):
     idioma: str = Field(default="es", pattern=r"^(auto|[a-z]{2})$")
     calidad: Literal["rapida", "alta", "maximo"] = "rapida"
     distinguir_voces: bool = True
+    personas: int | None = Field(default=None, ge=1, le=12, strict=True)
     usar_gpu: bool = True
 
 

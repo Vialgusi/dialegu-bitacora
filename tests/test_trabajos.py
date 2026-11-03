@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from backend.motor import trabajos
 from backend.motor.trabajos import FRECUENCIA, Cola, Trabajo
@@ -15,6 +16,8 @@ class WhisperFalso:
 
 def preparar(monkeypatch, tmp_path):
     usados = []
+    # Pruebas independientes del hardware: tampoco deben descargar las librerías de CUDA.
+    monkeypatch.setattr(trabajos.gpu, "hay_gpu", lambda: False)
     monkeypatch.setattr(trabajos, "decode_audio", lambda *_a, **_k: np.zeros(FRECUENCIA * 2, dtype=np.float32))
 
     def asegurar(_carpeta, _calidad, distinguir, *_a):
@@ -52,3 +55,35 @@ def test_por_omision_distingue_voces(monkeypatch, tmp_path):
     resultado = procesar(cola, tmp_path)
     assert usados == ["modelos", "voces"]
     assert resultado["meta"]["distinguir_voces"] is True
+
+
+@pytest.mark.parametrize("personas", [None, 1, 12])
+def test_parametros_de_calidad_y_personas_llegan_a_los_motores(monkeypatch, tmp_path, personas):
+    cola, _ = preparar(monkeypatch, tmp_path)
+    opciones, numeros = [], []
+
+    class WhisperEspia(WhisperFalso):
+        def transcribe(self, muestras, **kwargs):
+            opciones.append(kwargs)
+            return super().transcribe(muestras, **kwargs)
+
+    monkeypatch.setattr(trabajos.modelos, "cargar_whisper", lambda *_: WhisperEspia())
+    monkeypatch.setattr(trabajos, "reconocer_voces", lambda *args: numeros.append(args[-1]) or [(0, 2, 0)])
+    resultado = procesar(cola, tmp_path, personas=personas, tema=" Huerta ")
+    assert numeros == [personas]
+    assert opciones[0]["condition_on_previous_text"] is False
+    assert opciones[0]["vad_parameters"] == {"min_silence_duration_ms": 700, "speech_pad_ms": 400}
+    assert opciones[0]["vad_filter"] is True
+    assert opciones[0]["hotwords"] == "Huerta"
+    assert resultado["meta"]["personas"] == personas
+    assert "WeSpeaker ResNet34" in resultado["meta"]["modelo_voces"]
+
+
+@pytest.mark.parametrize("personas", [0, 13, -1, True, 2.0, 1.5, "2", ""])
+def test_cola_rechaza_personas_invalidas(monkeypatch, tmp_path, personas):
+    cola, _ = preparar(monkeypatch, tmp_path)
+    with pytest.raises(ValueError, match="personas"):
+        cola.crear({"personas": personas})
+    assert list(cola.carpeta_trabajos.iterdir()) == []
+    with pytest.raises(ValueError, match="personas"):
+        Trabajo("t", {"personas": personas}, tmp_path)

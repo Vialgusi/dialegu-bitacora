@@ -1,4 +1,8 @@
 import numpy as np
+import pytest
+from types import SimpleNamespace
+
+from backend.motor import voces
 
 from backend.motor.voces import fusionar_por_similitud
 
@@ -34,3 +38,66 @@ def test_cadena_de_fragmentos_termina_en_un_solo_destino():
     huellas = {"p": unitario(1, 0, 0), "f1": unitario(0.95, 0.3, 0), "f2": unitario(0.9, 0.4, 0.1)}
     destino = fusionar_por_similitud(huellas, {"p": 100, "f1": 10, "f2": 5})
     assert destino == {"f1": "p", "f2": "p"}
+
+
+@pytest.mark.parametrize("personas", [None, 1, 2, 12])
+def test_numero_de_personas_configura_agrupacion_y_controla_fusion(monkeypatch, personas):
+    configuraciones, fusiones, avances = [], [], []
+    segmentos = [SimpleNamespace(start=0, end=2, speaker=0), SimpleNamespace(start=2, end=4, speaker=1)]
+
+    def config(**kwargs):
+        return SimpleNamespace(**kwargs)
+
+    def diarizador(configuracion):
+        configuraciones.append(configuracion)
+        return SimpleNamespace(process=lambda *_a, **_k: SimpleNamespace(sort_by_start_time=lambda: segmentos))
+
+    def extractor(_config):
+        assert personas is None, "Con número fijo no se deben extraer huellas para fusionar"
+        return object()
+
+    sherpa = SimpleNamespace(
+        OfflineSpeakerDiarizationConfig=config,
+        OfflineSpeakerSegmentationModelConfig=config,
+        OfflineSpeakerSegmentationPyannoteModelConfig=config,
+        SpeakerEmbeddingExtractorConfig=config,
+        FastClusteringConfig=config,
+        OfflineSpeakerDiarization=diarizador,
+        SpeakerEmbeddingExtractor=extractor,
+    )
+    monkeypatch.setitem(__import__("sys").modules, "sherpa_onnx", sherpa)
+    monkeypatch.setattr(voces, "_leer_wav", lambda _: np.zeros(64000))
+    monkeypatch.setattr(voces, "_huella_media", lambda *_: unitario(1, 0))
+    monkeypatch.setattr(voces, "fusionar_por_similitud", lambda *_: fusiones.append(True) or {1: 0})
+    resultado = voces._diarizar("x.wav", "seg", "huellas", avances.append, lambda: False, personas)
+    assert configuraciones[0].clustering.num_clusters == (personas if personas is not None else -1)
+    assert configuraciones[0].clustering.threshold == 0.5
+    assert voces.SIMILITUD_MISMA_PERSONA == 0.55
+    assert fusiones == ([True] if personas is None else [])
+    assert resultado[-1][2] == (0 if personas is None else 1)
+    assert avances[-1] == 1.0
+
+
+def test_personas_cruza_el_proceso_hijo(monkeypatch):
+    import queue
+    import threading
+
+    class Proceso:
+        def __init__(self, target, args, **_):
+            self.target, self.args = target, args
+
+        def start(self):
+            self.target(*self.args)
+
+        def is_alive(self):
+            return False
+
+    contexto = SimpleNamespace(Queue=queue.Queue, Event=threading.Event, Process=Proceso)
+    monkeypatch.setattr(voces.mp, "get_context", lambda _: contexto)
+
+    def diarizar(*args):
+        assert args[-1] == 3
+        return [(0, 2, 0)]
+
+    monkeypatch.setattr(voces, "_diarizar", diarizar)
+    assert voces.reconocer_voces("x.wav", "seg", "huellas", lambda _: None, lambda: False, 3) == [(0, 2, 0)]

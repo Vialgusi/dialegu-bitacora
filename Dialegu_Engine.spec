@@ -11,7 +11,9 @@ for paquete in ('faster_whisper', 'ctranslate2', 'sherpa_onnx', 'av', 'fpdf'):
     datas += d
     binaries += b
     hiddenimports += h
-hiddenimports += collect_submodules('uvicorn') + collect_submodules('backend')
+hiddenimports += collect_submodules('uvicorn') + collect_submodules(
+    'backend', filter=lambda nombre: not nombre.startswith('backend.herramientas')
+)
 
 a = Analysis(
     ['engine_entry.py'],
@@ -22,7 +24,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['torch', 'tensorflow', 'matplotlib', 'tkinter'],
+    excludes=['torch', 'tensorflow', 'matplotlib', 'tkinter', 'backend.herramientas'],
     noarchive=False,
     optimize=0,
 )

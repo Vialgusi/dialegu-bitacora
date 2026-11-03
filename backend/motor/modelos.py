@@ -15,7 +15,7 @@ from .descargas import descargar
 
 ESPEJOS = ("https://huggingface.co", "https://hf-mirror.com")
 
-# Segmentación pyannote 3.0 (MIT) y huellas de voz 3D-Speaker ERes2Net (Apache-2.0), exportadas por sherpa-onnx.
+# Segmentación pyannote 3.0 (MIT) y huellas WeSpeaker ResNet34 de VoxCeleb, exportadas para sherpa-onnx.
 SEGMENTACION = {
     "repo": "csukuangfj/sherpa-onnx-pyannote-segmentation-3-0",
     "revision": "9403a6902bb58e3d5ae8c7e77c3422de279db2e0",
@@ -28,13 +28,11 @@ HUELLAS = {
     "carpeta": "",
     "archivos": [
         (
-            "3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
-            39593761,
-            "1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b",
+            "wespeaker_en_voxceleb_resnet34_LM.onnx",
+            26530550,
+            "e9848563da86f263117134dfd7ad63c92355b37de492b55e325400c9d9c39012",
         )
     ],
-    # Nombre local que ya usaban las versiones anteriores.
-    "renombrar": {"3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx": "3dspeaker_eres2net_base_16k.onnx"},
 }
 WHISPER = {
     "rapida": {

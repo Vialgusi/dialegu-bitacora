@@ -183,7 +183,7 @@ Requisitos orientativos: Windows 10 u 11 de 64 bits, 8 GB de memoria (16 GB reco
 ```
 Electron + React (interfaz)  ──HTTP local con token──▶  Motor en Python (FastAPI)
                                                          ├─ faster-whisper / CTranslate2: transcripción (CPU o CUDA)
-                                                         ├─ sherpa-onnx: segmentación pyannote 3.0 + huellas de voz 3D-Speaker
+                                                         ├─ sherpa-onnx: segmentación pyannote 3.0 + huellas de voz WeSpeaker
                                                          ├─ alineación de palabras con voces y armado de turnos
                                                          └─ exportadores: python-docx (Word), fpdf2 (PDF), Markdown, SRT
 ```
@@ -221,6 +221,20 @@ npm run electron:dev
 - La interfaz se puede ver sin motor en `http://localhost:5175/?demo=1` (con `npm run dev`).
 - Antes de abrir un PR: `python -m pytest tests` y, en `frontend`, `npm test && npm run lint && npm run build`.
 
+### Medir la calidad localmente
+
+Compare un proyecto corregido con una transcripción automática del mismo audio:
+
+```bash
+python -m backend.herramientas.medir --referencia ref.bitacora --hipotesis hip.bitacora
+```
+
+Imprime WER, DER aproximado y el número de voces. Conserva las tildes al comparar palabras.
+El DER incluye omisiones, falsas alarmas y voces confundidas, sin margen de tolerancia en los cortes.
+Si está disponible `scipy`, el mapeo de voces es óptimo; de lo contrario usa una búsqueda voraz,
+indicada en la salida, que puede sobreestimar el error. La herramienta no se incluye en el instalador.
+Los umbrales iniciales de voces (agrupación 0,5 y fusión 0,55) quedan pendientes de calibrar con audio real corregido.
+
 Para generar el instalador:
 
 ```bash
@@ -238,7 +252,7 @@ npm run electron:build
 ## Créditos y licencia
 
 - Transcripción: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (MIT), con los modelos Whisper de OpenAI (MIT).
-- Reconocimiento de voces: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0), con la segmentación de [pyannote](https://github.com/pyannote/pyannote-audio) 3.0 (MIT) y las huellas de voz de [3D-Speaker](https://github.com/modelscope/3D-Speaker) (Apache-2.0).
+- Reconocimiento de voces: [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0), con la segmentación de [pyannote](https://github.com/pyannote/pyannote-audio) 3.0 (MIT) y las huellas de voz WeSpeaker ResNet34 entrenadas con VoxCeleb.
 - Exportación: [python-docx](https://github.com/python-openxml/python-docx) (MIT) y [fpdf2](https://github.com/py-pdf/fpdf2) (LGPL-3.0).
 
 [GPL-3.0-or-later](LICENSE). Puede usarla, estudiarla, modificarla y redistribuirla; si distribuye una versión modificada, debe compartir también su código bajo la misma licencia.

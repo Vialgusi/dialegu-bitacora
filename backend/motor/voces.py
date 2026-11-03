@@ -22,10 +22,10 @@ def _leer_wav(ruta):
     return np.frombuffer(datos, dtype="<i2").astype(np.float32) / 32768.0
 
 
-# Fusión de voces por huella. En audios largos la agrupación de sherpa fragmenta a una persona en
-# varias voces (entrevista de 64 min con 2 personas: 20 voces). La huella media de cada fragmento se
-# parece ≥ 0,68 a la de su persona real, y las dos personas reales se parecían 0,37 entre sí.
-SIMILITUD_MISMA_PERSONA = 0.6
+# Umbral de agrupación automática y similitud mínima para fusionar fragmentos de una persona.
+# Valores provisionales para ResNet34: calibrar con la referencia de SPEC-V04 §3.5.
+UMBRAL_AGRUPACION = 0.5
+SIMILITUD_MISMA_PERSONA = 0.55
 TRAMOS_POR_HUELLA = 8
 SEGUNDOS_MINIMOS_TRAMO = 1.5
 SEGUNDOS_MAXIMOS_TRAMO = 10.0
@@ -76,7 +76,7 @@ def fusionar_por_similitud(huellas, segundos, umbral=SIMILITUD_MISMA_PERSONA):
     return {miembro: destino for destino, (_, _, miembros) in grupos.items() for miembro in miembros if miembro != destino}
 
 
-def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado):
+def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None):
     import sherpa_onnx
 
     # Pocos hilos a propósito: la app no debe acaparar el equipo de quien la usa mientras procesa.
@@ -87,8 +87,8 @@ def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado):
             num_threads=hilos,
         ),
         embedding=sherpa_onnx.SpeakerEmbeddingExtractorConfig(model=str(ruta_huellas), num_threads=hilos),
-        # Detección automática del número de voces. Forzar el número empeoró los resultados en las pruebas.
-        clustering=sherpa_onnx.FastClusteringConfig(num_clusters=-1, threshold=0.6),
+        # Sin un número conocido, sherpa estima cuántas voces hay usando el umbral.
+        clustering=sherpa_onnx.FastClusteringConfig(num_clusters=personas if personas is not None else -1, threshold=UMBRAL_AGRUPACION),
         min_duration_on=0.3,
         min_duration_off=0.5,
     )
@@ -104,6 +104,11 @@ def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado):
     resultado = diarizador.process(audio, callback=avance)
     tramos = [(s.start, s.end, s.speaker) for s in resultado.sort_by_start_time()]
     if cancelado() or not tramos:
+        return tramos
+
+    if personas is not None:
+        # La fusión alteraría el número de personas que se indicó explícitamente.
+        al_avanzar(1.0)
         return tramos
 
     extractor = sherpa_onnx.SpeakerEmbeddingExtractor(
@@ -123,17 +128,17 @@ def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado):
     return [(a, b, destino.get(v, v)) for a, b, v in tramos]
 
 
-def _proceso_hijo(ruta_wav, ruta_segmentacion, ruta_huellas, mensajes, cancelar):
+def _proceso_hijo(ruta_wav, ruta_segmentacion, ruta_huellas, mensajes, cancelar, personas=None):
     try:
         tramos = _diarizar(
-            ruta_wav, ruta_segmentacion, ruta_huellas, lambda f: mensajes.put(("avance", f)), cancelar.is_set
+            ruta_wav, ruta_segmentacion, ruta_huellas, lambda f: mensajes.put(("avance", f)), cancelar.is_set, personas
         )
         mensajes.put(("cancelado", None) if cancelar.is_set() else ("listo", tramos))
     except Exception as error:  # se reenvía al proceso principal
         mensajes.put(("error", repr(error)))
 
 
-def reconocer_voces(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado):
+def reconocer_voces(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None):
     """Devuelve una lista de tramos (inicio, fin, voz) ordenada por inicio.
 
     `voz` es un entero arbitrario; el orden de aparición se decide después, en la alineación.
@@ -142,7 +147,7 @@ def reconocer_voces(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cance
     mensajes, cancelar = contexto.Queue(), contexto.Event()
     hijo = contexto.Process(
         target=_proceso_hijo,
-        args=(str(ruta_wav), str(ruta_segmentacion), str(ruta_huellas), mensajes, cancelar),
+        args=(str(ruta_wav), str(ruta_segmentacion), str(ruta_huellas), mensajes, cancelar, personas),
         daemon=True,
         name="voces",
     )
