@@ -12,7 +12,7 @@
     "dispositivo": "cpu",
     "modelo_voces": "pyannote segmentación 3.0 + 3D-Speaker ERes2Net",
     "segundos_proceso": 48,
-    "version_app": "0.4.0",
+    "version_app": "0.4.1",
     "audio_original": "demo/huerta.mp3",
     "guia": [
       "¿Qué ha significado la huerta?",

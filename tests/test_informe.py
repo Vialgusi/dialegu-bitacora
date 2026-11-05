@@ -4,7 +4,7 @@ from io import BytesIO
 
 import pytest
 
-from backend.motor.informe import construir_informe
+from backend.motor.informe import construir_informe, titulo_de_pregunta
 from backend.motor.exportar import FORMATOS
 
 
@@ -27,12 +27,16 @@ def test_entrevista_menor_tiempo_y_respuestas(demo):
     demo['voces'][0]['segundos'] = 0
     informe = construir_informe(demo)
     assert informe['entrevistadora'] == 'v2'
-    assert informe['cuerpo'][0]['titulo'] == 'Apertura'
-    assert [t['id'] for t in informe['cuerpo'][2]['preguntas']] == ['t5', 't6']
+    # v2 nunca pregunta: todo queda en una sola sección, sin perder turnos.
+    assert [s['titulo'] for s in informe['cuerpo']] == ['Apertura']
+    assert len(informe['cuerpo'][0]['respuestas']) == 8
     demo['meta']['entrevistadora'] = 'v1'
     informe = construir_informe(demo)
     assert informe['entrevistadora'] == 'v1'
-    assert [t['id'] for t in informe['cuerpo'][1]['respuestas']] == ['t5', 't6']
+    assert [t['id'] for t in informe['cuerpo'][0]['preguntas']] == ['t1', 't2']
+    assert informe['cuerpo'][1]['titulo'] == '¿Y qué dificultades han encontrado?'
+    # «Entiendo. … Propongo…» (t7) no pregunta: sigue en la sección de la segunda pregunta.
+    assert [t['id'] for t in informe['cuerpo'][1]['respuestas']] == ['t5', 't6', 't7', 't8']
 
 
 def test_v02_sin_campos_nuevos(demo):
@@ -129,6 +133,35 @@ def test_entrevista_no_repite_la_pregunta_del_titulo(demo):
     conversacion = md.split('## Conversación')[1].split('## Nota metodológica')[0]
     pregunta = demo['turnos'][2]['texto']  # Voz 2 habla menos: es la entrevistadora
     assert conversacion.count(pregunta) == 1
+
+
+@pytest.mark.parametrize(('texto', 'esperado'), [
+    ('Una introducción. ¿Primera pregunta? ¿Última pregunta?', '¿Última pregunta?'),
+    ('Cuéntame, ¿cómo fue?', '¿Cómo fue?'),
+    ('¿Qué te pareció cuando propusieron «¿por qué no?» en la reunión?', '¿Qué te pareció cuando propusieron «¿por qué no?» en la reunión?'),
+    ('Primera oración. Segunda oración.', 'Primera oración.'),
+    ('y cuánto tiempo trabajaste allí?', 'Y cuánto tiempo trabajaste allí?'),
+    ('   ', 'Pregunta'),
+    ('', 'Pregunta'),
+])
+def test_titulo_de_pregunta(texto, esperado):
+    assert titulo_de_pregunta(texto) == esperado
+
+
+def test_titulo_de_pregunta_trunca_sin_cortar_palabras():
+    assert titulo_de_pregunta('Una pregunta con varias palabras largas', maximo=20) == 'Una pregunta con…'
+
+
+def test_entrevista_conserva_el_turno_largo_en_markdown(demo):
+    demo['meta']['tipo'] = 'entrevista'
+    turno = demo['turnos'][2]
+    turno['texto'] = 'Antes de continuar, quisiera conocer tu experiencia. ¿Cómo fue?'
+    seccion = next(s for s in construir_informe(demo)['cuerpo'] if turno['id'] in [p['id'] for p in s['preguntas']])
+    assert seccion['titulo'] == '¿Cómo fue?'
+    md = FORMATOS['informe-md'][0](demo).decode('utf-8')
+    conversacion = md.split('## Conversación')[1].split('## Nota metodológica')[0]
+    assert turno['texto'] in conversacion
+    assert '¿Cómo fue?' in conversacion
 
 
 def test_fecha_legible_valida_y_acepta_dia_primero():

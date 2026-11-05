@@ -25,6 +25,26 @@ export function renombrarVoz(documento, id, nombre) {
     voces: documento.voces.map((voz) => (voz.id === id ? { ...voz, nombre } : voz)),
   })
 }
+export function unirVoces(documento, origen, destino) {
+  if (origen === destino || ![origen, destino].every((id) => documento.voces.some((voz) => voz.id === id)))
+    return documento
+  return recalcularVoces({
+    ...documento,
+    meta: documento.meta.entrevistadora === origen
+      ? { ...documento.meta, entrevistadora: destino }
+      : documento.meta,
+    voces: documento.voces.filter((voz) => voz.id !== origen),
+    turnos: documento.turnos.map((turno) => turno.voz === origen ? { ...turno, voz: destino } : turno),
+    // La voz de respaldo de cada cita también debe apuntar a una voz que exista.
+    ...(documento.citas && { citas: documento.citas.map((cita) => cita.voz === origen ? { ...cita, voz: destino } : cita) }),
+  })
+}
+export function avisoVoces(documento) {
+  if (documento.meta.distinguir_voces === false || documento.voces.length !== 1 || !(documento.meta.duracion >= 180))
+    return null
+  const minutos = Math.round(documento.meta.duracion / 60)
+  return `Solo se detectó una voz en ${minutos} minutos. Si en el audio hablan varias personas, vuelva a transcribir indicando cuántas son en «¿Cuántas personas hablan?».`
+}
 export function asignarVoz(documento, idTurno, idVoz = null) {
   if (!documento.turnos.some((turno) => turno.id === idTurno)) return documento
   let voces = documento.voces

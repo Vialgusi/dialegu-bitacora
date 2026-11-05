@@ -1,4 +1,11 @@
 // Cómo contar a la persona qué modelo usa, qué implica y cuánto tardará en su equipo.
+export function normalizarPersonas(valor, distinguirVoces) {
+  if (distinguirVoces === false || !['string', 'number'].includes(typeof valor) || String(valor).trim() === '')
+    return null
+  const personas = Number(valor)
+  return Number.isInteger(personas) && personas >= 1 && personas <= 12 ? personas : null
+}
+
 export const MODELOS = [
   {
     calidad: 'rapida',

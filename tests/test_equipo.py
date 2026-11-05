@@ -53,6 +53,46 @@ def test_la_velocidad_medida_reemplaza_la_referencia(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "velocidades.json").read_text())["alta|cpu|voces"] == 0.375
 
 
+def test_estimacion_sin_mediciones_conserva_la_referencia(tmp_path, monkeypatch):
+    monkeypatch.setattr(gpu, "hay_gpu", lambda: True)
+    monkeypatch.setattr(equipo.os, "cpu_count", lambda: equipo.HILOS_REFERENCIA)  # el runner de CI tiene menos hilos
+    referencia = max(equipo.REFERENCIA_TRANSCRIPCION["cuda"]["alta"], equipo.REFERENCIA_VOCES)
+    estimacion = equipo.estimar(tmp_path, tmp_path, 3600, "alta", True, True)
+    assert estimacion["segundos_proceso"] == round(referencia * 3600 + equipo.SEGUNDOS_FIJOS)
+    assert estimacion["medido"] is False
+
+
+def test_medicion_de_otra_calidad_ajusta_proporcionalmente(tmp_path, monkeypatch):
+    monkeypatch.setattr(gpu, "hay_gpu", lambda: True)
+    monkeypatch.setattr(equipo.os, "cpu_count", lambda: equipo.HILOS_REFERENCIA)  # el runner de CI tiene menos hilos
+    (tmp_path / "velocidades.json").write_text(json.dumps({"alta|cuda|voces": 0.2}), encoding="utf-8")
+    rapida = equipo.estimar(tmp_path, tmp_path, 3600, "rapida", True, True)
+    alta = equipo.estimar(tmp_path, tmp_path, 3600, "alta", True, True)
+    assert rapida["segundos_proceso"] == round((0.2 / equipo._referencia("cuda", "alta", True)) * equipo._referencia("cuda", "rapida", True) * 3600)
+    assert rapida["segundos_proceso"] <= alta["segundos_proceso"]
+    assert rapida["medido"] is False
+
+
+@pytest.mark.parametrize("medida, esperado", [(0.01, 0.25), (10, 4.0)])
+def test_factor_de_equipo_se_acota(tmp_path, monkeypatch, medida, esperado):
+    monkeypatch.setattr(gpu, "hay_gpu", lambda: True)
+    monkeypatch.setattr(equipo.os, "cpu_count", lambda: equipo.HILOS_REFERENCIA)  # el runner de CI tiene menos hilos
+    (tmp_path / "velocidades.json").write_text(json.dumps({"alta|cuda|voces": medida}), encoding="utf-8")
+    estimacion = equipo.estimar(tmp_path, tmp_path, 3600, "rapida", True, True)
+    proceso = esperado * equipo._referencia("cuda", "rapida", True) * 3600
+    assert estimacion["segundos_proceso"] == round(proceso)
+
+
+@pytest.mark.parametrize("clave_incompatible", ["alta|cpu|voces", "alta|cuda|sin_voces"])
+def test_medidas_de_otro_dispositivo_o_sin_voces_no_influyen(tmp_path, monkeypatch, clave_incompatible):
+    monkeypatch.setattr(gpu, "hay_gpu", lambda: True)
+    monkeypatch.setattr(equipo.os, "cpu_count", lambda: equipo.HILOS_REFERENCIA)  # el runner de CI tiene menos hilos
+    (tmp_path / "velocidades.json").write_text(json.dumps({clave_incompatible: 0.01}), encoding="utf-8")
+    estimacion = equipo.estimar(tmp_path, tmp_path, 3600, "rapida", True, True)
+    assert estimacion["segundos_proceso"] == round(equipo._referencia("cuda", "rapida", True) * 3600 + equipo.SEGUNDOS_FIJOS)
+    assert estimacion["medido"] is False
+
+
 def test_nota_metodologica_y_en_el_informe():
     meta = {"nombre": "x", "tipo": "entrevista", "fecha": "2026-10-31", "duracion": 60, "modelo": "large-v3-turbo", "dispositivo": "gpu",
             "idioma": "es", "distinguir_voces": True, "modelo_voces": "pyannote", "segundos_proceso": 125, "version_app": "0.3.0"}

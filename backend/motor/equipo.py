@@ -131,6 +131,14 @@ def registrar_velocidad(carpeta_datos, calidad, dispositivo, distinguir_voces, s
         (carpeta_datos / "velocidades.json").write_text(json.dumps(velocidades, indent=1), encoding="utf-8")
 
 
+def _referencia(dispositivo, calidad, distinguir_voces):
+    """Segundos de proceso por segundo de audio según la referencia."""
+    escala = min(3.0, max(0.5, HILOS_REFERENCIA / (os.cpu_count() or HILOS_REFERENCIA)))
+    transcribir = REFERENCIA_TRANSCRIPCION[dispositivo][calidad] * (escala if dispositivo == "cpu" else 1)
+    voces = REFERENCIA_VOCES * escala if distinguir_voces else 0
+    return max(transcribir, voces)
+
+
 def duracion_audio(ruta):
     """Duración en segundos leyendo solo la cabecera del archivo; None si no se puede."""
     try:
@@ -150,14 +158,30 @@ def duracion_audio(ruta):
 def estimar(carpeta_datos, carpeta_modelos, duracion, calidad, usar_gpu, distinguir_voces):
     """Segundos estimados del trabajo, desglosados, y si sale de una medición en este equipo."""
     dispositivo = "cuda" if usar_gpu and gpu.hay_gpu() else "cpu"
-    medida = leer_velocidades(carpeta_datos).get(clave(calidad, dispositivo, distinguir_voces))
+    velocidades = leer_velocidades(carpeta_datos)
+    medida = velocidades.get(clave(calidad, dispositivo, distinguir_voces))
     if medida is not None:
         proceso = medida * duracion
     else:
-        escala = min(3.0, max(0.5, HILOS_REFERENCIA / (os.cpu_count() or HILOS_REFERENCIA)))
-        transcribir = REFERENCIA_TRANSCRIPCION[dispositivo][calidad] * (escala if dispositivo == "cpu" else 1)
-        voces = REFERENCIA_VOCES * escala if distinguir_voces else 0
-        proceso = max(transcribir, voces) * duracion + SEGUNDOS_FIJOS
+        factores = []
+        sufijo = "voces" if distinguir_voces else "sin_voces"
+        for clave_medida, valor in velocidades.items():
+            partes = clave_medida.split("|") if isinstance(clave_medida, str) else []
+            if len(partes) != 3 or partes[1:] != [dispositivo, sufijo] or partes[0] == calidad:
+                continue
+            if not isinstance(valor, (int, float)) or isinstance(valor, bool):
+                continue
+            try:
+                referencia = _referencia(dispositivo, partes[0], distinguir_voces)
+            except KeyError:
+                continue
+            factores.append(valor / referencia)
+        if factores:
+            # Las medidas ya incluyen la carga del modelo: no se suman SEGUNDOS_FIJOS otra vez.
+            factor = min(4.0, max(0.25, sum(factores) / len(factores)))
+            proceso = factor * _referencia(dispositivo, calidad, distinguir_voces) * duracion
+        else:
+            proceso = _referencia(dispositivo, calidad, distinguir_voces) * duracion + SEGUNDOS_FIJOS
     pendientes = modelos.bytes_pendientes(carpeta_modelos, calidad, distinguir_voces)
     preparar = dispositivo == "cuda" and not gpu.preparada(carpeta_modelos)
     if dispositivo == "cuda" and not gpu.librerias_listas(carpeta_modelos):
