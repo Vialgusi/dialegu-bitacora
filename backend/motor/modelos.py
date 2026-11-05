@@ -167,6 +167,11 @@ def asegurar_modelos(carpeta, calidad, distinguir_voces, al_avanzar=lambda hecho
     }
 
 
+def hilos_whisper(logicos=None):
+    """Hilos de CPU para Whisper. Deja libre buena parte del equipo; las voces corren en paralelo con otros 2 hilos."""
+    return min(4, max(1, (logicos or os.cpu_count() or 4) // 3))
+
+
 def cargar_whisper(ruta, dispositivo="cpu"):
     """Carga el modelo de Whisper desde su carpeta local; queda en memoria para los siguientes trabajos."""
     clave = (str(ruta), dispositivo)
@@ -177,7 +182,6 @@ def cargar_whisper(ruta, dispositivo="cpu"):
                 device=dispositivo,
                 # En la GPU, int8_float16: en una GTX 1660 Ti float16 puro fue 3 veces más lento y float32 ocupa el doble.
                 compute_type="int8_float16" if dispositivo == "cuda" else "int8",
-                # Deja libre buena parte del equipo; las voces corren en paralelo con otros 2 hilos.
-                cpu_threads=min(4, max(1, (os.cpu_count() or 4) // 3)),
+                cpu_threads=hilos_whisper(),
             )
         return _whisper[clave]

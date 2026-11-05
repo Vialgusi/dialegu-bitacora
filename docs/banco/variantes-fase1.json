@@ -1,0 +1,12 @@
+[
+  {"id": "base", "descripcion": "Motor 0.4.1 sin cambios (modelo Preciso)"},
+  {"id": "hilos-fisicos", "descripcion": "H1/H2: Whisper con núcleos físicos − 1, voces con 2", "hilos_whisper": "fisicos-1", "hilos_voces": 2},
+  {"id": "hilos-todos", "descripcion": "H1/H2: todos los hilos lógicos para Whisper, la mitad para voces", "hilos_whisper": "todos", "hilos_voces": "mitad"},
+  {"id": "beam1", "descripcion": "H3: búsqueda greedy", "beam_size": 1},
+  {"id": "lotes8", "descripcion": "H4: BatchedInferencePipeline, lotes de 8", "por_lotes": true, "tamano_lote": 8},
+  {"id": "voces-sin-silencio", "descripcion": "H5: las voces solo procesan el habla que detecta el VAD", "voces_sin_silencio": true},
+  {"id": "serie", "descripcion": "H6: voces y texto en serie, cada uno con todos los hilos", "paralelo": false, "hilos_whisper": "todos", "hilos_voces": "todos"},
+  {"id": "sin-voces", "descripcion": "Techo: solo transcripción", "distinguir_voces": false},
+  {"id": "ligero-base", "descripcion": "Modelo Ligero, resto igual a base", "calidad": "rapida"},
+  {"id": "ligero-beam1-fisicos", "descripcion": "Modelo Ligero, greedy y núcleos físicos − 1", "calidad": "rapida", "beam_size": 1, "hilos_whisper": "fisicos-1", "hilos_voces": 2}
+]

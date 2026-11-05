@@ -119,8 +119,9 @@ def test_personas_cruza_el_proceso_hijo(monkeypatch):
     contexto = SimpleNamespace(Queue=queue.Queue, Event=threading.Event, Process=Proceso)
     monkeypatch.setattr(voces.mp, "get_context", lambda _: contexto)
 
-    def diarizar(*args):
+    def diarizar(*args, hilos=None):
         assert args[-1] == 3
+        assert hilos is None
         return [(0, 2, 0)]
 
     monkeypatch.setattr(voces, "_diarizar", diarizar)

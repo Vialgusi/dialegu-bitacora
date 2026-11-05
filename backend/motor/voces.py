@@ -74,11 +74,16 @@ def absorber_fragmentos(huellas, segundos):
     }
 
 
-def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None):
+def hilos_voces(logicos=None):
+    """Pocos hilos a propósito: la app no debe acaparar el equipo de quien la usa mientras procesa."""
+    return min(2, max(1, (logicos or os.cpu_count() or 4) // 4))
+
+
+def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None, hilos=None):
     import sherpa_onnx
 
-    # Pocos hilos a propósito: la app no debe acaparar el equipo de quien la usa mientras procesa.
-    hilos = min(2, max(1, (os.cpu_count() or 4) // 4))
+    # `hilos` solo lo fija el banco de pruebas (backend/herramientas/banco.py); la app usa el valor por defecto.
+    hilos = hilos or hilos_voces()
     config = sherpa_onnx.OfflineSpeakerDiarizationConfig(
         segmentation=sherpa_onnx.OfflineSpeakerSegmentationModelConfig(
             pyannote=sherpa_onnx.OfflineSpeakerSegmentationPyannoteModelConfig(model=str(ruta_segmentacion)),
@@ -126,17 +131,17 @@ def _diarizar(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, 
     return [(a, b, destino.get(v, v)) for a, b, v in tramos]
 
 
-def _proceso_hijo(ruta_wav, ruta_segmentacion, ruta_huellas, mensajes, cancelar, personas=None):
+def _proceso_hijo(ruta_wav, ruta_segmentacion, ruta_huellas, mensajes, cancelar, personas=None, hilos=None):
     try:
         tramos = _diarizar(
-            ruta_wav, ruta_segmentacion, ruta_huellas, lambda f: mensajes.put(("avance", f)), cancelar.is_set, personas
+            ruta_wav, ruta_segmentacion, ruta_huellas, lambda f: mensajes.put(("avance", f)), cancelar.is_set, personas, hilos=hilos
         )
         mensajes.put(("cancelado", None) if cancelar.is_set() else ("listo", tramos))
     except Exception as error:  # se reenvía al proceso principal
         mensajes.put(("error", repr(error)))
 
 
-def reconocer_voces(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None):
+def reconocer_voces(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cancelado, personas=None, hilos=None):
     """Devuelve una lista de tramos (inicio, fin, voz) ordenada por inicio.
 
     `voz` es un entero arbitrario; el orden de aparición se decide después, en la alineación.
@@ -145,7 +150,7 @@ def reconocer_voces(ruta_wav, ruta_segmentacion, ruta_huellas, al_avanzar, cance
     mensajes, cancelar = contexto.Queue(), contexto.Event()
     hijo = contexto.Process(
         target=_proceso_hijo,
-        args=(str(ruta_wav), str(ruta_segmentacion), str(ruta_huellas), mensajes, cancelar, personas),
+        args=(str(ruta_wav), str(ruta_segmentacion), str(ruta_huellas), mensajes, cancelar, personas, hilos),
         daemon=True,
         name="voces",
     )

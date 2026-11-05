@@ -1,0 +1,28 @@
+[
+  {
+    "id": "entrevista-limpia",
+    "audio": "audios/entrevista-wikimedia-8min.ogg",
+    "referencia": "referencias/entrevista-wikimedia-8min.bitacora",
+    "sha256_referencia": null,
+    "idioma": "es",
+    "personas": null,
+    "tema": "Wikimedia, Wikipedia, Venezuela",
+    "tipo": "entrevista",
+    "grupo": "entrevista"
+  },
+  {"id": "entrevista-16k-wav", "audio": "audios/entrevista-16k.wav", "referencia": "referencias/entrevista-wikimedia-8min.bitacora", "idioma": "es", "tipo": "entrevista", "grupo": "entrevista"},
+  {"id": "entrevista-44k-wav", "audio": "audios/entrevista-44k.wav", "referencia": "referencias/entrevista-wikimedia-8min.bitacora", "idioma": "es", "tipo": "entrevista", "grupo": "entrevista"},
+  {"id": "entrevista-mp3", "audio": "audios/entrevista.mp3", "referencia": "referencias/entrevista-wikimedia-8min.bitacora", "idioma": "es", "tipo": "entrevista", "grupo": "entrevista"},
+  {"id": "entrevista-m4a", "audio": "audios/entrevista.m4a", "referencia": "referencias/entrevista-wikimedia-8min.bitacora", "idioma": "es", "tipo": "entrevista", "grupo": "entrevista"},
+  {"id": "entrevista-opus32", "audio": "audios/entrevista.opus", "referencia": "referencias/entrevista-wikimedia-8min.bitacora", "idioma": "es", "tipo": "entrevista", "grupo": "entrevista"},
+  {
+    "id": "debate-sala-10min",
+    "audio": "audios/debate-presidencial-peru2006-parte1.ogg",
+    "referencia": "referencias/debate-peru2006-parte1.bitacora",
+    "idioma": "es",
+    "personas": null,
+    "tema": "debate presidencial, Perú, 2006",
+    "tipo": "grupo_focal",
+    "recortar": 600
+  }
+]
