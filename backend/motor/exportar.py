@@ -335,7 +335,7 @@ def _bloques_informe(t):
         else:
             # La primera pregunta ya es el título de la sección: no se repite.
             preguntas = seccion["preguntas"]
-            if preguntas and preguntas[0]["texto"] == seccion["titulo"]:
+            if preguntas and preguntas[0]["texto"].strip() == seccion["titulo"]:
                 preguntas = preguntas[1:]
             turnos = preguntas + seccion["respuestas"]
         for turno in turnos:

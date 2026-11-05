@@ -1,5 +1,27 @@
 """Informe local y determinista, común a los exportadores; no resume ni inventa texto."""
 
+import re
+
+
+def titulo_de_pregunta(texto, maximo=120):
+    """Título corto de una sección de entrevista: la última pregunta del turno o, si no hay, su primera oración."""
+    texto = texto.strip()
+    if not texto:
+        return "Pregunta"
+    oraciones = re.split(r"(?<=[.!?…])\s+", texto)
+    preguntas = [oracion for oracion in oraciones if oracion.endswith("?")]
+    titulo = preguntas[-1] if preguntas else oraciones[0]
+    if preguntas and "¿" in titulo:
+        titulo = titulo[titulo.rfind("¿"):]
+    # Whisper suele empezar en minúscula un turno cortado: el título va con mayúscula inicial.
+    inicial = re.search(r"\w", titulo)
+    if inicial:
+        titulo = titulo[:inicial.start()] + titulo[inicial.start()].upper() + titulo[inicial.start() + 1:]
+    if len(titulo) > maximo:
+        corte = titulo.rfind(" ", 0, maximo - 1)
+        titulo = titulo[:corte if corte > 0 else maximo - 1].rstrip() + "…"
+    return titulo
+
 
 def construir_informe(transcripcion):
     meta = transcripcion["meta"]
@@ -40,11 +62,12 @@ def construir_informe(transcripcion):
             entrevistadora = min(activas, key=lambda v: tiempos[v["id"]])["id"] if activas else None
         cuerpo = []
         for t in anexo:
-            if t["voz"] == entrevistadora:
+            # Un comentario de la entrevistadora sin pregunta («interesante») no abre sección: sigue en la actual.
+            if t["voz"] == entrevistadora and (not cuerpo or "?" in t["texto"]):
                 if cuerpo and not cuerpo[-1]["respuestas"] and cuerpo[-1]["preguntas"]:
                     cuerpo[-1]["preguntas"].append(t)
                 else:
-                    cuerpo.append({"titulo": t["texto"], "inicio": t["inicio"], "preguntas": [t], "respuestas": []})
+                    cuerpo.append({"titulo": titulo_de_pregunta(t["texto"]), "inicio": t["inicio"], "preguntas": [t], "respuestas": []})
             else:
                 if not cuerpo:
                     cuerpo.append({"titulo": "Apertura", "inicio": t["inicio"], "preguntas": [], "respuestas": []})
