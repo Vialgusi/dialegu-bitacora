@@ -172,7 +172,7 @@ Requisitos orientativos: Windows 10 u 11 de 64 bits, 8 GB de memoria (16 GB reco
 ## Limitaciones conocidas
 
 - Cuando dos personas hablan a la vez, el turno queda asignado a una sola.
-- En grabaciones con mala calidad o voces parecidas, el reconocimiento automático puede juntar o partir personas; indicar cuántas personas hablan mejora el resultado, y en la revisión se pueden unir voces.
+- En grabaciones con mala calidad o voces parecidas, el reconocimiento automático puede juntar o partir personas; si eso pasa, pruebe a indicar cuántas personas hablan (suele ayudar, aunque una persona que habla muy poco puede quedar junto a otra) y, en la revisión, una voces o corrija la voz turno por turno.
 - Tras silencios largos o con mucho ruido, Whisper puede inventar o repetir frases. Revise esos tramos.
 - Los nombres propios y los términos poco comunes fallan más, aunque ayuda escribirlos en «Tema y palabras clave».
 - La aceleración por tarjeta gráfica solo funciona con NVIDIA.
