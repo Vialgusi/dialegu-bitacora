@@ -13,3 +13,4 @@ backend-dist/
 .pytest_cache/
 .test-tmp/
 !frontend/build/
+resultados-banco/
