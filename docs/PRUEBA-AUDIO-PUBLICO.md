@@ -47,4 +47,21 @@ Medición de la agrupación sola (umbral de sherpa) con la huella WeSpeaker:
 
 - La calibración sale de dos audios. Conviene medir con más grabaciones propias (con su consentimiento) usando `python -m backend.herramientas.medir`.
 - Grabaciones con ruido de sala y voces parecidas siguen mezclando personas; indicar cuántas hablan es lo más fiable.
-- En entrevistas, el informe usa el turno completo de la entrevistadora como encabezado de pregunta; con turnos largos queda pesado.
+- En el debate, fijar «3 personas» da 2 voces (una reúne a dos personas, 946 s), mientras que el modo automático da 3. Con número fijo, un grupo muy pequeño puede quedarse sin turnos. Queda para la 0.5, junto con la calibración.
+
+## Prueba de la app empaquetada (0.4.1, 04-11-2026)
+
+Motor compilado con PyInstaller e instalador NSIS hechos en local con los mismos comandos que `release.yml`. Equipo: i7-8700 (12 hilos), 32 GB, GTX 1660 Ti de 6 GB, Windows 11. Se simuló un equipo nuevo con una carpeta de datos vacía.
+
+| Caso | Resultado |
+|---|---|
+| Instalar en silencio encima de la 0.3.0 | 192 s; la entrada de desinstalación pasa a 0.4.x y la app abre y arranca el motor |
+| Primer uso en CPU, «Ligero», entrevista de 10 min, automático | descarga 519 MB en ~50 s; 241 s en total; 2 voces; 22 turnos |
+| Primer uso con tarjeta, «Preciso», misma entrevista | descarga la aceleración (570 MB) y el modelo; 379 s, con la preparación de la tarjeta; 2 voces |
+| Debate de 18 min, «Preciso», tarjeta, automático | 260 s; **3 voces** (529, 411 y 139 s de habla) |
+| Debate de 18 min, «3 personas» | 254 s; 2 voces (ver Pendiente) |
+| Exportar Word, PDF, Markdown y SRT desde el motor empaquetado | los cuatro, en todos los casos |
+
+En esta versión también entran los títulos cortos de pregunta en el informe de entrevistas (5 secciones legibles en la entrevista de 10 min, sin perder turnos) y estimaciones de tiempo coherentes entre modelos.
+
+No verificado: la interfaz con clics reales (solo se comprobó por el protocolo de depuración que la pantalla de inicio carga, detecta el equipo y lista los modelos), Windows 10 y equipos sin tarjeta NVIDIA.

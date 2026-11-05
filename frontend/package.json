@@ -1,7 +1,7 @@
 {
   "name": "dialegu-bitacora",
   "productName": "Dialegu Bitácora",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Graba o carga encuentros, grupos focales y entrevistas; los transcribe por voces en tu propio equipo.",
   "author": "Dialegu",
   "private": true,
