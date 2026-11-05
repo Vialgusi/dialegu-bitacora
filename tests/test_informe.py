@@ -138,6 +138,7 @@ def test_entrevista_no_repite_la_pregunta_del_titulo(demo):
 @pytest.mark.parametrize(('texto', 'esperado'), [
     ('Una introducción. ¿Primera pregunta? ¿Última pregunta?', '¿Última pregunta?'),
     ('Cuéntame, ¿cómo fue?', '¿Cómo fue?'),
+    ('¿Qué te pareció cuando propusieron «¿por qué no?» en la reunión?', '¿Qué te pareció cuando propusieron «¿por qué no?» en la reunión?'),
     ('Primera oración. Segunda oración.', 'Primera oración.'),
     ('y cuánto tiempo trabajaste allí?', 'Y cuánto tiempo trabajaste allí?'),
     ('   ', 'Pregunta'),

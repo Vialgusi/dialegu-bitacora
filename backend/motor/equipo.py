@@ -178,7 +178,7 @@ def estimar(carpeta_datos, carpeta_modelos, duracion, calidad, usar_gpu, disting
             factores.append(valor / referencia)
         if factores:
             # Las medidas ya incluyen la carga del modelo: no se suman SEGUNDOS_FIJOS otra vez.
-            factor = min(2.0, max(0.5, sum(factores) / len(factores)))
+            factor = min(4.0, max(0.25, sum(factores) / len(factores)))
             proceso = factor * _referencia(dispositivo, calidad, distinguir_voces) * duracion
         else:
             proceso = _referencia(dispositivo, calidad, distinguir_voces) * duracion + SEGUNDOS_FIJOS

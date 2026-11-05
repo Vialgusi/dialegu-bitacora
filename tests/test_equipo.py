@@ -71,7 +71,7 @@ def test_medicion_de_otra_calidad_ajusta_proporcionalmente(tmp_path, monkeypatch
     assert rapida["medido"] is False
 
 
-@pytest.mark.parametrize("medida, esperado", [(0.01, 0.5), (10, 2.0)])
+@pytest.mark.parametrize("medida, esperado", [(0.01, 0.25), (10, 4.0)])
 def test_factor_de_equipo_se_acota(tmp_path, monkeypatch, medida, esperado):
     monkeypatch.setattr(gpu, "hay_gpu", lambda: True)
     (tmp_path / "velocidades.json").write_text(json.dumps({"alta|cuda|voces": medida}), encoding="utf-8")

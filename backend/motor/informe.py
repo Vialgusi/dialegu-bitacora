@@ -12,7 +12,8 @@ def titulo_de_pregunta(texto, maximo=120):
     preguntas = [oracion for oracion in oraciones if oracion.endswith("?")]
     titulo = preguntas[-1] if preguntas else oraciones[0]
     if preguntas and "¿" in titulo:
-        titulo = titulo[titulo.rfind("¿"):]
+        # El primer «¿» de la oración: uno posterior puede ser una pregunta citada («¿por qué no?»).
+        titulo = titulo[titulo.find("¿"):]
     # Whisper suele empezar en minúscula un turno cortado: el título va con mayúscula inicial.
     inicial = re.search(r"\w", titulo)
     if inicial:
